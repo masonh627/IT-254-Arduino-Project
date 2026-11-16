@@ -1,47 +1,60 @@
-Python 3.14.8 (tags/v3.14.8:8e6e75d, Sep 30 2026, 18:19:33) [MSC v.1944 64 bit (AMD64)] on win32
-Enter "help" below or click "Help" above for more information.
->>> import serial
-... import time
-... # Configure the serial port - MacOS looks somethinglike this: "/dev/ttyUSB0"
-... port = "COM3" # Replace with your serial port
-... baud_rate = 9600
-... arduino = serial.Serial(port, baud_rate)
-... try:
-... while True:
-... # Send data
-... message_to_send = "ON\n"
-... arduino.write(message_to_send.encode('utf-8'))
-... print(f"Sent: {message_to_send.strip()}")
-... # Receive data
-... if arduino.in_waiting > 0:
-... received_data = arduino.readline().decode('utf-8').strip()
-... print(f"Received: {received_data}")
-... time.sleep(1) # Wait for 1 second
-... except serial.SerialException as e:
-... print(f"Error: {e}")
-... finally:
-... arduino.close()
-... print("Serial port closed")
-SyntaxError: multiple statements found while compiling a single statement
->>> 
->>> 
->>> import serial
->>> import time
->>> port = "COM3"
->>> baud_rate = 9600
->>> arduino = serial.Serial(port, baud_rate)
->>> try:
-...     while True:
-...         message_to_send = "ON\n"
-...         arduino.write(message_to_send.encode('utf-8'))
-...         print(f"Sent: {message_to_send.strip() }")
-... 
-...         if ardunio.in_waiting > 0:
-            received_data = arduino.readline().decode('utf-8').strip()
-            print(f"Received: {received_data}")
-        time.sleep(1)
-except serial.SerialException as e:
-    print(f"Error: {e}")
-finally:
-    arduino.close()
-    print("Serial port closed")
+import os
+import time
+import sys
+import openai
+
+OPENAI_API_KEY="your_api_key_here"
+SERIAL_PORT = "COM3"
+BAUD_RATE = 9600
+
+
+openai.api_key = api_key
+
+
+#Method: Get hint from AI
+def get_game_hint(game_state: str) -> str:
+    """
+    :param game_state: Description of the current game situation.
+    :return: Hint text from AI.
+    """
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",  
+            messages=[
+                {"role": "system", "content": "You are a helpful hint bot for a game. Give short, useful hints without spoilers."},
+                {"role": "user", "content": f"Game situation: {game_state}"}
+            ],
+            max_tokens=10,  # Limit hint length
+            temperature=0.7  # Slight creativity
+        )
+        return response.choices[0].message["content"].strip()
+    except Exception as e:
+        return f"Error getting hint: {e}"
+    
+#Method: Send hint to Arduino using serial
+def send_to_arduino(message):
+    try:
+        with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=2) as arduino:
+            time.sleep(2)  # Wait for Arduino to reset
+            arduino.write(message.encode('utf-8'))
+            print(f"Sent to Arduino: {message}")
+    except serial.SerialException as e:
+        print(f"Serial error: {e}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+
+
+# MAIN PROGRAM
+if __name__ == "__main__":
+    print("=== Game Hint Bot ===")
+    while True:
+        game_state = input("\nDescribe your game situation (or 'quit' to exit): ").strip()
+        if game_state.lower() == "quit":
+            print("Goodbye!")
+            break
+        if not game_state:
+            print("Please describe the game situation.")
+            continue
+
+        hint = get_game_hint(game_state)
+        print(f"Hint: {hint}")
