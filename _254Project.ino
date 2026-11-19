@@ -68,13 +68,6 @@ void decreaseHealth(){
   }
 }
 
-void setup() {
-  // Setup LEDS
-  updateLEDS();
-
-  pinMode(BUZZERPIN, OUTPUT);
-}
-
 void printWrapped(String text) {
   lcd.clear();
 
@@ -101,7 +94,9 @@ void printWrapped(String text) {
 
 void setup() {
   // put your setup code here, to run once:
+  updateLEDS();
 
+  pinMode(BUZZERPIN, OUTPUT);
 
   Serial.begin(9600);
   randomSeed(analogRead(0));
